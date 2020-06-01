@@ -3,12 +3,38 @@ import scrapy
 import json
 
 
+from io import StringIO
+from html.parser import HTMLParser
+
+
+class MLStripper(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.reset()
+        self.strict = False
+        self.convert_charrefs= True
+        self.text = StringIO()
+
+    def handle_data(self, d):
+        self.text.write(d)
+
+    def get_data(self):
+        return self.text.getvalue()
+
+
+def strip_tags(html):
+    s = MLStripper()
+    s.feed(html)
+    return s.get_data()
+
+
 def parse_product_entry(response):
     prod_name = response.selector.css(".mu-sale-box__headline").get()
     if not prod_name:
 
         return
     prod_name = prod_name[prod_name.find("\n") + 2:prod_name.rfind("<")].strip()
+    prod_name = strip_tags(prod_name)
     feature_table = response.selector.css("#features")
     tds = feature_table.xpath("//td")
     prod_ingredients = ""
@@ -26,7 +52,7 @@ def parse_product_entry(response):
     print(prod_name)
     print(prod_ingredients)
     with open(f'./mueller/results/{prod_name}.json', 'w') as outfile:
-        json.dump({"name": prod_name, "ingredients": prod_ingredients}, outfile)
+        json.dump({"name": strip_tags(prod_name), "ingredients": strip_tags(prod_ingredients)}, outfile)
 
 
 class MuellerSpider(scrapy.Spider):
