@@ -48,11 +48,21 @@ def parse_product_entry(response):
         return
 
     prod_ingredients = prod_ingredients[prod_ingredients.find("\n") + 2:prod_ingredients.rfind("<")].strip()
-    prod_ingredients.replace("/", ",")
-    print(prod_name)
-    print(prod_ingredients)
+    prod_ingredients = _sanitize_ingredients(prod_ingredients)
+
     with open(f'./mueller/results/{prod_name}.json', 'w') as outfile:
         json.dump({"name": strip_tags(prod_name), "ingredients": strip_tags(prod_ingredients)}, outfile)
+
+
+def _sanitize_ingredients(ingredients: str):
+    to_replace = {"/", "*", "•", "·"}
+    for replace in to_replace:
+        ingredients = ingredients.replace(replace, ",")
+    ingredients = ingredients.lower()
+    ingredients_array = ingredients.split(",")
+    titled = [ingredient.strip().title() for ingredient in ingredients_array]
+    ingredients = ",".join(titled)
+    return ingredients
 
 
 class MuellerSpider(scrapy.Spider):
